@@ -16,7 +16,7 @@ int main(){
             "while (x > 0) {"
                 "x = x - 5;"
             "}"
-            );
+        );
     Parser parser(lexer);
     AST* root=parser.parse();
     cout<<"Parsed successfully!!\n";

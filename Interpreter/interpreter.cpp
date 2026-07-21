@@ -6,11 +6,12 @@ using namespace std;
 //dynamic_cast is used to check the node belong to numberNode class or binaryOpNode class
 // dynamic_cast in C++ is used for safe type conversion in inheritance hierarchies, mainly with polymorphism
 int Interpreter::visit(AST* node){
-    if(numberNode* number=dynamic_cast<numberNode*>(node)){
+
+    if(NumberNode* number=dynamic_cast<NumberNode*>(node)){
         return stoi(number->value);
     }
     //If a variable node comes it checks in the symbol table if it is stored there it returns the value else it throws error
-    if(variableNode* var=dynamic_cast<variableNode*>(node)){
+    if(VariableNode* var=dynamic_cast<VariableNode*>(node)){
         auto it=variables.find(var->name);
         if(it==variables.end()){
             throw runtime_error("Undefined variable: "+var->name);
@@ -22,7 +23,7 @@ int Interpreter::visit(AST* node){
         return it->second.value;
     }
 
-    if(unaryOpNode* opNode=dynamic_cast<unaryOpNode*>(node)){
+    if(UnaryOpNode* opNode=dynamic_cast<UnaryOpNode*>(node)){
         int value=visit(opNode->exp);
         switch(opNode->op.type){
             case PLUS:
@@ -36,7 +37,7 @@ int Interpreter::visit(AST* node){
         }
     }
     
-    if(programNode* program=dynamic_cast<programNode*>(node)){
+    if(ProgramNode* program=dynamic_cast<ProgramNode*>(node)){
         int result=0;
         for(AST* statements : program->statements){
             result=visit(statements);
@@ -44,7 +45,7 @@ int Interpreter::visit(AST* node){
         return result;
     }
     
-    if(declareNode* declarenode=dynamic_cast<declareNode*>(node)){
+    if(DeclareNode* declarenode=dynamic_cast<DeclareNode*>(node)){
         RuntimeValue var(declarenode->type,0,false);
         int result=0;
         if(declarenode->initializer){
@@ -56,7 +57,7 @@ int Interpreter::visit(AST* node){
         return result;
     }
     //It assigns the value to the variable (i.e by updating the symbol table) and also returns the evaluated value.
-    if(assignNode* assign=dynamic_cast<assignNode*>(node)){
+    if(AssignNode* assign=dynamic_cast<AssignNode*>(node)){
         int result=visit(assign->right); //evaluate the expression
         auto it=variables.find(assign->left->name);
         if(it==variables.end()){
@@ -67,7 +68,7 @@ int Interpreter::visit(AST* node){
         return it->second.value;//return the evaluated value
     }
     
-    if(binaryOpNode* opNode=dynamic_cast<binaryOpNode*>(node)){
+    if(BinaryOpNode* opNode=dynamic_cast<BinaryOpNode*>(node)){
         //These two lines traverse in the tree and return the result after evaluating the left and right subtree
         int LEFT=visit(opNode->left);
         int RIGHT=visit(opNode->right);
@@ -102,7 +103,7 @@ int Interpreter::visit(AST* node){
         }
     }
 
-    if(ifNode* ifnode=dynamic_cast<ifNode*>(node)){
+    if(IfNode* ifnode=dynamic_cast<IfNode*>(node)){
         if(visit(ifnode->condition)){
             visit(ifnode->thenbody);
         }else if(ifnode->elsebody!=NULL){
@@ -111,14 +112,14 @@ int Interpreter::visit(AST* node){
         return 0;
     }
 
-    if(whileNode* whilenode=dynamic_cast<whileNode*>(node)){
+    if(WhileNode* whilenode=dynamic_cast<WhileNode*>(node)){
         while(visit(whilenode->condition)){
             visit(whilenode->body);
         }
         return 0;
     }
 
-    if(blockNode* body=dynamic_cast<blockNode*>(node)){
+    if(BlockNode* body=dynamic_cast<BlockNode*>(node)){
         int result=0;
         for(AST* statement:body->statements){
             result=visit(statement);

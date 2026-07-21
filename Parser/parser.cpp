@@ -25,17 +25,17 @@ AST* Parser::factor(){
     Token token=currToken;
     if(token.type==PLUS){               //unary plus (Implements the grammer rule F -> +F)
         eat(token.type);
-        return new unaryOpNode(token,factor());
+        return new UnaryOpNode(token,factor());
     }else if(token.type==MINUS){        //unary minus (Implements the grammer rule F-> -F)
         eat(token.type);
-        return new unaryOpNode(token,factor());
+        return new UnaryOpNode(token,factor());
     }else if(token.type==IDENTIFIER){   //it recognizes the variable and create a new node
         eat(token.type);
-        return new variableNode(token.value);
+        return new VariableNode(token.value);
     }else if(token.type==NUMBER){ //This implements the grammer rule F -> number
         //it consumes the token moves forward and create a node in syntax tree and return its pointer
         eat(token.type);
-        return new numberNode(token.value);
+        return new NumberNode(token.value);
     }else if(token.type==LEFTPAREN){ //This implements the grammer rule F -> (E)
         eat(LEFTPAREN);
         AST* node=comparison();
@@ -57,7 +57,7 @@ AST* Parser::term(){
             eat(DIVIDE);
         }
         // it creates a node with a binary operator as parent pointing to two operands in left and right and stores it on the left node for future operator,which defines the associativity in the grammer.
-        node=new binaryOpNode(node,token,factor());
+        node=new BinaryOpNode(node,token,factor());
     }
     return node;
 }
@@ -74,7 +74,7 @@ AST* Parser::expression(){
             eat(MINUS);
         }
         //it creates a binary operator node as parent with its left and right ppointer pointing to its operand and the pointer to the parent gets stored in the left node which can be used in next iteration. 
-        node=new binaryOpNode(node,token,term());
+        node=new BinaryOpNode(node,token,term());
     }
     return node;
 }
@@ -90,8 +90,8 @@ AST* Parser::statement(){
         eat(ASSIGN);
         AST* node=logicalOr();
         eat(SEMI);
-        variableNode* varNode=new variableNode(varToken.value);
-        return new assignNode(varNode,node);
+        VariableNode* varNode=new VariableNode(varToken.value);
+        return new AssignNode(varNode,node);
     }
     if(currToken.type==IF){
         return ifStatement();
@@ -104,6 +104,7 @@ AST* Parser::statement(){
     return node; //This implements S -> L
 }
 
+// declare function() => it deals with the declaration and initialization of the variable with it types
 AST* Parser::declare(){
     DataType type;
     if(currToken.type==INT){
@@ -115,15 +116,15 @@ AST* Parser::declare(){
     }
     Token varToken=currToken;
     eat(IDENTIFIER);
-    variableNode* varNode=new variableNode(varToken.value);
+    VariableNode* varNode=new VariableNode(varToken.value);
     if(currToken.type==SEMI){
         eat(SEMI);
-        return new declareNode(type,varNode);
+        return new DeclareNode(type,varNode);
     }
     eat(ASSIGN);
     AST* node=logicalOr();
     eat(SEMI);
-    return new declareNode(type,varNode,node);
+    return new DeclareNode(type,varNode,node);
 }
 
 // program function() => deals with entire program and parse entire program sequentially
@@ -132,7 +133,7 @@ AST* Parser::program(){
     while(currToken.type!=END){
         statements.push_back(statement()); //Adding statement to the program
     }
-    return new programNode(statements);
+    return new ProgramNode(statements);
 }
 
 //comparison function() => deals with comparison operators and return the pointer to the parent operator
@@ -148,7 +149,7 @@ AST* Parser::comparison(){
     ){
         Token token=currToken;
         eat(token.type);
-        node=new binaryOpNode(node,token,expression());
+        node=new BinaryOpNode(node,token,expression());
     }
     return node;
 }
@@ -161,7 +162,7 @@ AST* Parser:: block(){
         statements.push_back(statement());
     }
     eat(RIGHTBRAC);
-    return new blockNode(statements);
+    return new BlockNode(statements);
 }
 
 // ifStatement function() => it is used to parse the if-else statements it parse the condition and block of code inside both if and else statment
@@ -170,13 +171,13 @@ AST* Parser::ifStatement(){
     eat(LEFTPAREN);
     AST* condition=logicalOr();
     eat(RIGHTPAREN);
-    blockNode* thenbody=static_cast<blockNode*>(block());
+    BlockNode* thenbody=static_cast<BlockNode*>(block());
     if(currToken.type==ELSE){
         eat(ELSE);
-        blockNode* elsebody=static_cast<blockNode*>(block());
-        return new ifNode(condition,thenbody,elsebody);
+        BlockNode* elsebody=static_cast<BlockNode*>(block());
+        return new IfNode(condition,thenbody,elsebody);
     }
-    return new ifNode(condition,thenbody);
+    return new IfNode(condition,thenbody);
 }
 
 //whileStatment function() => it is used to parse the while statement it parses the condition and block of code inside the while loop
@@ -185,8 +186,8 @@ AST* Parser::whileStatement(){
     eat(LEFTPAREN);
     AST* condition=logicalOr();
     eat(RIGHTPAREN);
-    blockNode* body=static_cast<blockNode*>(block());
-    return new whileNode(condition,body);
+    BlockNode* body=static_cast<BlockNode*>(block());
+    return new WhileNode(condition,body);
 }
 
 //logicalOr function() => it deals with || operator and return the pointer to the parent operator
@@ -195,7 +196,7 @@ AST* Parser::logicalOr(){
     while(currToken.type==OR){
         Token token=currToken;
         eat(OR);
-        node=new binaryOpNode(node,token,logicalAnd());
+        node=new BinaryOpNode(node,token,logicalAnd());
     }
     return node;
 }
@@ -206,7 +207,7 @@ AST* Parser::logicalAnd(){
     while(currToken.type==AND){
         Token token=currToken;
         eat(AND);
-        node=new binaryOpNode(node,token,logicalNot());
+        node=new BinaryOpNode(node,token,logicalNot());
     }
     return node;
 }
@@ -216,7 +217,7 @@ AST* Parser::logicalNot(){
     if(currToken.type==NOT){
         Token token=currToken;
         eat(NOT);
-        return new unaryOpNode(token,logicalNot());
+        return new UnaryOpNode(token,logicalNot());
     }
     return comparison();
 }

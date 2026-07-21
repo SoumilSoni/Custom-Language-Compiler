@@ -6,6 +6,7 @@ SemanticAnalyzer::SemanticAnalyzer(){
 
 }
 
+//This function analyses the whole program and decides that the program is semantically verified or not
 void SemanticAnalyzer::analyze(AST* root){
     currScope=new Scope(nullptr);
     visit(root);
@@ -13,11 +14,12 @@ void SemanticAnalyzer::analyze(AST* root){
 }
 
 DataType SemanticAnalyzer::analyzeExpression(AST* node){
-    if(numberNode* numbernode=dynamic_cast<numberNode*>(node)){
+
+    if(NumberNode* numbernode=dynamic_cast<NumberNode*>(node)){
         return DataType::INT;
     }
     
-    if(variableNode* varnode=dynamic_cast<variableNode*>(node)){
+    if(VariableNode* varnode=dynamic_cast<VariableNode*>(node)){
         string varname=varnode->name;
         Symbol* sym=currScope->lookup(varname);
         if(!sym){
@@ -29,7 +31,7 @@ DataType SemanticAnalyzer::analyzeExpression(AST* node){
         return sym->type;
     }
 
-    if(unaryOpNode* unarynode=dynamic_cast<unaryOpNode*>(node)){
+    if(UnaryOpNode* unarynode=dynamic_cast<UnaryOpNode*>(node)){
         DataType type=analyzeExpression(unarynode->exp);
         if(type==DataType::INT && (unarynode->op.type==PLUS || unarynode->op.type==MINUS)){
             return type;
@@ -40,7 +42,7 @@ DataType SemanticAnalyzer::analyzeExpression(AST* node){
         throw runtime_error(err);
     }
 
-    if(binaryOpNode* binarynode=dynamic_cast<binaryOpNode*>(node)){
+    if(BinaryOpNode* binarynode=dynamic_cast<BinaryOpNode*>(node)){
         DataType left=analyzeExpression(binarynode->left);
         DataType right=analyzeExpression(binarynode->right);
         if(binarynode->op.type==PLUS || 
@@ -70,9 +72,10 @@ DataType SemanticAnalyzer::analyzeExpression(AST* node){
     }
 }
 
+//This function visits the statement nodes and semantically verify them if there is something wrong it throws the runtime error
 void SemanticAnalyzer::visit(AST* node){
 
-    if(declareNode* declarenode=dynamic_cast<declareNode*>(node)){
+    if(DeclareNode* declarenode=dynamic_cast<DeclareNode*>(node)){
         string varname=declarenode->variable->name;
         Symbol sym(varname,declarenode->type,false);
         if(!currScope->insert(sym)){
@@ -90,7 +93,7 @@ void SemanticAnalyzer::visit(AST* node){
         return ;
     }
 
-    if(assignNode* assignnode=dynamic_cast<assignNode*>(node)){
+    if(AssignNode* assignnode=dynamic_cast<AssignNode*>(node)){
         string varname=assignnode->left->name;
         Symbol* sym=currScope->lookup(varname);
         if(!sym){
@@ -105,7 +108,7 @@ void SemanticAnalyzer::visit(AST* node){
         return ;
     }
 
-    if(blockNode* blocknode=dynamic_cast<blockNode*>(node)){
+    if(BlockNode* blocknode=dynamic_cast<BlockNode*>(node)){
         Scope* oldscope=currScope;
         Scope* newscope=new Scope(currScope);
         currScope=newscope;
@@ -117,7 +120,7 @@ void SemanticAnalyzer::visit(AST* node){
         return ;
     }
 
-    if(ifNode* ifnode=dynamic_cast<ifNode*>(node)){
+    if(IfNode* ifnode=dynamic_cast<IfNode*>(node)){
         DataType type=analyzeExpression(ifnode->condition);
         if(type!=DataType::BOOL){
             throw runtime_error("Condition in the if statment should be BOOL");
@@ -130,7 +133,7 @@ void SemanticAnalyzer::visit(AST* node){
         return ;
     }
 
-    if(whileNode* whilenode=dynamic_cast<whileNode*>(node)){
+    if(WhileNode* whilenode=dynamic_cast<WhileNode*>(node)){
         DataType type=analyzeExpression(whilenode->condition);
         if(type!=DataType::BOOL){
             throw runtime_error("Condition in the while loop should be BOOL");
@@ -140,7 +143,7 @@ void SemanticAnalyzer::visit(AST* node){
         return ;
     }
 
-    if(programNode* program=dynamic_cast<programNode*>(node)){
+    if(ProgramNode* program=dynamic_cast<ProgramNode*>(node)){
         for(auto statement:program->statements){
             visit(statement);
         }
