@@ -84,7 +84,16 @@ void SemanticAnalyzer::visit(AST* node){
         if(declarenode->initializer){
             DataType declareType=declarenode->type;
             DataType rhsType=analyzeExpression(declarenode->initializer);
-            if(declareType!=rhsType){
+            NumberNode* numnode=dynamic_cast<NumberNode*>(declarenode->initializer);
+            if(declareType==rhsType){
+
+            }else if(
+            (declareType==DataType::BOOL) && 
+            (numnode) && 
+            (numnode->value=="0" || numnode->value=="1")
+            ){
+                 
+            }else{
                 throw runtime_error("Type Mismatch");
             }
             Symbol* var=currScope->lookup(varname);
@@ -101,7 +110,16 @@ void SemanticAnalyzer::visit(AST* node){
         }
         DataType lhsType=sym->type;
         DataType rhsType=analyzeExpression(assignnode->right);
-        if(lhsType!=rhsType){
+        NumberNode* numnode=dynamic_cast<NumberNode*>(assignnode->right);
+        if(lhsType==rhsType){
+            
+        }else if(
+            (lhsType==DataType::BOOL) && 
+            (numnode) && 
+            (numnode->value=="0" || numnode->value=="1")
+        ){
+            
+        }else{
             throw runtime_error("Type Mismatch");
         }
         sym->initialized=true;
