@@ -62,6 +62,7 @@ Token Lexer::identifier(){
         result+=currChar;
         advance();
     }
+    
     //identifying keywords
     if(result=="if"){
         return Token(IF,"if");
@@ -77,6 +78,9 @@ Token Lexer::identifier(){
     }
     if(result=="bool"){
         return Token(BOOL,"bool");
+    }
+    if(result=="return"){
+        return Token(RETURN,"return");
     }
     return Token(IDENTIFIER,result);
 }
@@ -156,6 +160,12 @@ Token Lexer::getNextToken(){
         if(currChar>='0' && currChar<='9'){
             return number();
         }
+
+        if(currChar==','){
+            advance();
+            return Token(COMMA,",");
+        }
+        
         //detect arithmetic signs and paranthesis and convert them into token 
         
         if(currChar=='+'){

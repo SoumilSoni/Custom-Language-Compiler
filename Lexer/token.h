@@ -30,10 +30,12 @@ enum tokenType{
     IF,                     // if keyword
     ELSE,                   // else keyword
     WHILE,                  //while keyword
+    RETURN,                 // return keyword
     LEFTBRAC,               // {
     RIGHTBRAC,              // }
     INT,                    // int keyword
     BOOL,                   // bool keyword
+    COMMA,                  // ','
     END                     // End of input string
 };
 

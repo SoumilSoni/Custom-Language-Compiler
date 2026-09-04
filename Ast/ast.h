@@ -68,12 +68,14 @@ public:
     }
 };
 
-//ProgramNode is a child class inheriting AST class. This class is representing the entire program. It is having a vector which stores the pointer to the every statement in the program.
-class ProgramNode:public AST{
-public:
-    vector<AST*> statements;
-    ProgramNode(vector<AST*> statements){
-        this->statements=statements;
+
+class ParameterNode:public AST{
+public: 
+    DataType type;
+    string name;
+    ParameterNode(DataType type,const string &name){
+        this->type=type;
+        this->name=name;
     }
 };
 
@@ -85,6 +87,32 @@ public:
         this->statements=statements;
     }
 };
+
+class FunctionNode:public AST{
+public:
+    DataType returnType;
+    string name;
+    vector<ParameterNode*> parameters;
+    BlockNode* body;
+    FunctionNode(DataType returnType,const string &name,vector<ParameterNode*> &parameters,BlockNode* body){
+        this->returnType=returnType;
+        this->name=name;
+        this->parameters=parameters;
+        this->body=body;
+    }
+};
+
+//ProgramNode is a child class inheriting AST class. This class is representing the entire program. It is having a vector which stores the pointer to the every statement in the program.
+class ProgramNode:public AST{
+public:
+    vector<FunctionNode*> functions;
+    ProgramNode(vector<FunctionNode*> functions){
+        this->functions=functions;
+    }
+};
+
+
+
 
 //IfNode is a child class inherting AST class. This class is representing the if-else statements. It stores the condition of the if-statement the code inside if-else statement
 class IfNode:public AST{
@@ -123,6 +151,24 @@ public:
         this->initializer=initializer;
     }
 
+};
+
+class ReturnNode:public AST{
+public: 
+    AST* expression;
+    ReturnNode(AST* expression){
+        this->expression=expression;
+    }
+};
+
+class FunctionCallNode:public AST{
+public:     
+    string name;
+    vector<AST*> arguments;
+    FunctionCallNode(string name,vector<AST*> &arguments){
+        this->name=name;
+        this->arguments=arguments;
+    }
 };
 
 #endif

@@ -12,13 +12,27 @@ private:
     Token currToken; //It contains the current token of the input string that is being processed
     Token nextToken; //It contains the next token of the input string (used in assignment operator)
 
+    DataType type();
+
+    ParameterNode* parameter();
+
+    vector<ParameterNode*> parameterList();
+
+    AST* returnStatement();
+
+    vector<AST*> argumentList();
+
+    FunctionNode* function();
+
+    FunctionCallNode* functionCall();
+
     AST* program(); //This function is representing the grammer rule " P -> SP | epsilon "
     // It will handle the exection of all the statement in the program.
 
     AST* statement(); //This function is representing the grammer rule " S -> D | A | L | I | W" and " A -> id=L "
     //It will handle the assignment operartion i.e. assigning values to the variables.
 
-    AST* block(); // This function is representing the grammer " B -> {SP} "
+    BlockNode* block(); // This function is representing the grammer " B -> {SP} "
     // This function is representing a block of code which is used in conditional statement or loop blocks
 
     AST* ifStatement(); // This function is representing the grammer " I -> if(L)B | if(L)B else B "
@@ -63,21 +77,27 @@ public:
 /*
                                                 -----Grammer Rule-----
 
-                                            P -> SP | epsilon  (implemented using program function) 
-                                            S -> D | A | L | I | W (id==IDENTIFIER) (implemented using statement function)
+                                            P -> FnP | epsilon                                          (implemented using program function) 
+                                            Fn -> TY id (Pl)B               (Fn=FUNCTION)
+                                            PL -> Pa (( , Pa)* | epsilon ) (Pl=PARAMETER LIST)
+                                            Pa -> TY id                     (pa=PARAMETER)
+                                            S -> D | A | L | I | W | R      (id==IDENTIFIER)            (implemented using statement function)
+                                            R -> return L;
                                             A -> id=L
-                                            D -> TY id(=C)? (TY=type) (implemented using declare function)
-                                            TY -> int | bool
-                                            I -> if(L)B | if(L)B else B (implemented using ifStatement function)
-                                            W -> while(L)B (implemented using whileStatement function)
-                                            B ->{SP} (implemented using block function)
-                                            L -> O( || O)* (implemented using logicalOr fuction)
-                                            O -> A( && A)* (implemented using logicalAnd function)
-                                            A -> !A | C (implemented using logicalNot function)
-                                            C -> E((== | != | >= | > | <= | <) E)? (implemented using comparison function)
-                                            E -> T ((+ | -) T)* (implemented using expression function)
-                                            T → F ((* | /) F)* (implemented using term function)
-                                            F -> (+|-)F | number | identifier | (L) (implemented using factor function)
+                                            D -> TY id(=C)?                                             (implemented using declare function)
+                                            Ty -> int | bool                (Ty=TYPE)                   (implemented using type function)
+                                            I -> if(L)B | if(L)B else B                                 (implemented using ifStatement function)
+                                            W -> while(L)B                                              (implemented using whileStatement function)
+                                            B ->{SP}                                                    (implemented using block function)
+                                            L -> O( || O)*                                              (implemented using logicalOr fuction)
+                                            O -> A( && A)*                                              (implemented using logicalAnd function)
+                                            A -> !A | C                                                 (implemented using logicalNot function)
+                                            C -> E((== | != | >= | > | <= | <) E)?                      (implemented using comparison function)
+                                            E -> T ((+ | -) T)*                                         (implemented using expression function)
+                                            T → F ((* | /) F)*                                          (implemented using term function)
+                                            F -> (+|-)F | number | identifier | (L) | Fc                (implemented using factor function)
+                                            Fc -> id(Al)                    (Fc=FUNCTION CALL)
+                                            Al -> id (,id | epsilon)*       (Al=ARGUMENT LIST)
 */
 /*
                                             -----Precedence Order-----

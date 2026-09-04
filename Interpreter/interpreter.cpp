@@ -39,8 +39,8 @@ int Interpreter::visit(AST* node){
     
     if(ProgramNode* program=dynamic_cast<ProgramNode*>(node)){
         int result=0;
-        for(AST* statements : program->statements){
-            result=visit(statements);
+        for(AST* function:program->functions){
+            result=visit(function);
         }
         return result;
     }

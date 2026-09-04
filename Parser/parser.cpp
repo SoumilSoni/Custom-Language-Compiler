@@ -10,7 +10,7 @@ Parser::Parser(Lexer l):lexer(l){
 
 //eat function() => consumes the expected token else gives error
 void Parser:: eat(tokenType type){ //type(argument of the function) is the expected token 
-    if(currToken.type==type){
+    if(currToken.type == type){
         currToken=nextToken;
         nextToken=lexer.getNextToken();
     }else{
@@ -18,6 +18,75 @@ void Parser:: eat(tokenType type){ //type(argument of the function) is the expec
         cout << "Got: " << currToken.type << endl;
         throw runtime_error("Unexpected Token");
     }
+}
+
+DataType Parser::type(){
+    if(currToken.type==INT){
+        eat(INT);
+        return DataType::INT;
+    }
+    if(currToken.type==BOOL){
+        eat(BOOL);
+        return DataType::BOOL;
+    }
+}
+
+ParameterNode* Parser::parameter(){
+    DataType currType=type();
+    Token varToken=currToken;
+    eat(IDENTIFIER);
+    return new ParameterNode(currType,varToken.value);
+}
+
+vector<ParameterNode*> Parser::parameterList(){
+    vector<ParameterNode*> parameters;
+    if(currToken.type!=RIGHTPAREN){
+        parameters.push_back(parameter());
+        while(currToken.type==COMMA){
+            eat(COMMA);
+            parameters.push_back(parameter());
+        }
+    }
+    return parameters;
+}
+
+FunctionNode* Parser::function(){
+    DataType returnType=type();
+    string functionName=currToken.value;
+    eat(IDENTIFIER);
+    eat(LEFTPAREN);
+    vector<ParameterNode*> parameters=parameterList();
+    eat(RIGHTPAREN);
+    BlockNode* body=block();
+    return new FunctionNode(returnType,functionName,parameters,body);
+}
+
+AST* Parser::returnStatement(){
+    eat(RETURN);
+    AST* expression=logicalOr();
+    eat(SEMI);
+    return new ReturnNode(expression);
+}
+
+vector<AST*> Parser::argumentList(){
+    vector<AST*> list;
+    if(currToken.type!=RIGHTPAREN){
+        list.push_back(logicalOr());
+        while(currToken.type==COMMA){
+            eat(COMMA);
+            list.push_back(logicalOr());
+        }
+    }
+    return list;
+}
+
+FunctionCallNode* Parser::functionCall(){
+    string functionName=currToken.value;
+    eat(IDENTIFIER);
+    eat(LEFTPAREN);
+    vector<AST*> argList=argumentList();
+    eat(RIGHTPAREN);
+    return new FunctionCallNode(functionName,argList);
 }
 
 //factor function() => deals with paranthesis, number and unary operator and return the pointer of the number node or the parent operator
@@ -30,7 +99,10 @@ AST* Parser::factor(){
         eat(token.type);
         return new UnaryOpNode(token,factor());
     }else if(token.type==IDENTIFIER){   //it recognizes the variable and create a new node
-        eat(token.type);
+        if(nextToken.type==LEFTPAREN){
+            return functionCall();
+        }
+        eat(IDENTIFIER);
         return new VariableNode(token.value);
     }else if(token.type==NUMBER){ //This implements the grammer rule F -> number
         //it consumes the token moves forward and create a node in syntax tree and return its pointer
@@ -99,6 +171,9 @@ AST* Parser::statement(){
     if(currToken.type==WHILE){
         return whileStatement();
     }
+    if(currToken.type==RETURN){
+        return returnStatement();
+    }
     AST* node=logicalOr();
     eat(SEMI);
     return node; //This implements S -> L
@@ -106,34 +181,27 @@ AST* Parser::statement(){
 
 // declare function() => it deals with the declaration and initialization of the variable with it types
 AST* Parser::declare(){
-    DataType type;
-    if(currToken.type==INT){
-        type=DataType::INT;
-        eat(INT);
-    }else{
-        type=DataType::BOOL;
-        eat(BOOL);
-    }
+    DataType currType=type();
     Token varToken=currToken;
     eat(IDENTIFIER);
     VariableNode* varNode=new VariableNode(varToken.value);
     if(currToken.type==SEMI){
         eat(SEMI);
-        return new DeclareNode(type,varNode);
+        return new DeclareNode(currType,varNode);
     }
     eat(ASSIGN);
     AST* node=logicalOr();
     eat(SEMI);
-    return new DeclareNode(type,varNode,node);
+    return new DeclareNode(currType,varNode,node);
 }
 
 // program function() => deals with entire program and parse entire program sequentially
 AST* Parser::program(){
-    vector<AST*> statements; //It will store all statement sequentially
+    vector<FunctionNode*> functions; //It will store all statement sequentially
     while(currToken.type!=END){
-        statements.push_back(statement()); //Adding statement to the program
+        functions.push_back(function()); //Adding statement to the program
     }
-    return new ProgramNode(statements);
+    return new ProgramNode(functions);
 }
 
 //comparison function() => deals with comparison operators and return the pointer to the parent operator
@@ -155,7 +223,7 @@ AST* Parser::comparison(){
 }
 
 // block function() => it is used to parse the statements inside different blocks like if and while
-AST* Parser:: block(){
+BlockNode* Parser:: block(){
     eat(LEFTBRAC);
     vector<AST*> statements;
     while(currToken.type!=RIGHTBRAC){
