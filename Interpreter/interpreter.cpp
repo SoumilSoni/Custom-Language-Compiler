@@ -5,6 +5,90 @@ using namespace std;
 
 //dynamic_cast is used to check the node belong to numberNode class or binaryOpNode class
 // dynamic_cast in C++ is used for safe type conversion in inheritance hierarchies, mainly with polymorphism
+
+Interpreter::Interpreter(){
+    currFrame=NULL;
+}
+
+void Interpreter::collectFunctions(AST* root){
+    ProgramNode* program=dynamic_cast<ProgramNode*>(root);
+    for(auto function:program->functions){
+        if(!functionTable.insert(function->name,function)){
+            throw runtime_error ("Redeclaration of "+function->name+"()");
+        }
+    }
+}
+
+int Interpreter::executeFunction(AST* node,bool &returned){
+
+    if(ReturnNode* returnNode=dynamic_cast<ReturnNode*>(node)){
+        int result=visit(returnNode->expression);
+        returned=true;
+        return result;
+    }
+
+    if(BlockNode* block=dynamic_cast<BlockNode*>(node)){
+        for(auto statement:block->statements){
+            int result=executeFunction(statement,returned);
+            if(returned){
+                return result;
+            }
+        }
+    }
+
+    if(IfNode* ifnode=dynamic_cast<IfNode*>(node)){
+        int conditionResult=visit(ifnode->condition);
+        if(conditionResult){
+            int result=executeFunction(ifnode->thenbody,returned);
+            if(returned){
+                return result;
+            }
+        }else if(ifnode->elsebody!=NULL){
+            int result=executeFunction(ifnode->elsebody,returned);
+            if(returned){
+                return result;
+            }
+        }
+        return 0;
+    }
+
+    if(WhileNode* whilenode=dynamic_cast<WhileNode*>(node)){
+        while(visit(whilenode->condition)){
+            int result=executeFunction(whilenode->body,returned);
+            if(returned){
+                return result;
+            }
+        }
+        return 0;
+    }
+
+    return visit(node);
+}
+
+int Interpreter::callFunction(FunctionNode* function,vector<AST*> arguments){
+    string funcName=function->name;
+    vector<int> values;
+    for(auto exp:arguments){
+        values.push_back(visit(exp));
+    }
+    CallFrame* newFrame=new CallFrame();
+    for(int i=0;i<function->parameters.size();i++){
+        DataType datatype=function->parameters[i]->type;
+        int val=values[i];
+        string paraName=function->parameters[i]->name;
+        RuntimeValue runtimeValue(datatype,val,true);
+        newFrame->insert(paraName,runtimeValue);
+    }
+    CallFrame* previousFrame=currFrame;
+    currFrame=newFrame;
+    bool returned=false;
+    int returnValue=executeFunction(function->body,returned);
+    currFrame=previousFrame;
+    delete newFrame;
+    return returnValue;
+
+} 
+
 int Interpreter::visit(AST* node){
 
     if(NumberNode* number=dynamic_cast<NumberNode*>(node)){
@@ -12,15 +96,15 @@ int Interpreter::visit(AST* node){
     }
     //If a variable node comes it checks in the symbol table if it is stored there it returns the value else it throws error
     if(VariableNode* var=dynamic_cast<VariableNode*>(node)){
-        auto it=variables.find(var->name);
-        if(it==variables.end()){
+        auto it=currFrame->lookup(var->name);
+        if(it==nullptr){
             throw runtime_error("Undefined variable: "+var->name);
         }
-        if(!it->second.initialized){
+        if(!it->initialized){
             throw runtime_error("Accessing Unitialialized variable: "+var->name);
         }
 
-        return it->second.value;
+        return it->value;
     }
 
     if(UnaryOpNode* opNode=dynamic_cast<UnaryOpNode*>(node)){
@@ -45,6 +129,14 @@ int Interpreter::visit(AST* node){
         return result;
     }
     
+    if(FunctionCallNode* function=dynamic_cast<FunctionCallNode*>(node)){
+        FunctionNode* functionNode=functionTable.lookup(function->name);
+        if(functionNode==nullptr){
+            throw runtime_error("Undefined Function"+function->name+"()");
+        }
+        return callFunction(functionNode,function->arguments);
+    }
+
     if(DeclareNode* declarenode=dynamic_cast<DeclareNode*>(node)){
         RuntimeValue var(declarenode->type,0,false);
         int result=0;
@@ -53,19 +145,20 @@ int Interpreter::visit(AST* node){
             var.value=result;
             var.initialized=true;
         }
-        variables.insert({declarenode->variable->name,var});
+        currFrame->insert(declarenode->variable->name,var);
         return result;
     }
+
     //It assigns the value to the variable (i.e by updating the symbol table) and also returns the evaluated value.
     if(AssignNode* assign=dynamic_cast<AssignNode*>(node)){
         int result=visit(assign->right); //evaluate the expression
-        auto it=variables.find(assign->left->name);
-        if(it==variables.end()){
+        auto it=currFrame->lookup(assign->left->name);
+        if(it==nullptr){
             throw runtime_error("Undefined Variable: "+assign->left->name);
         }
-        it->second.value=result;//update the symbol table
-        it->second.initialized=true;
-        return it->second.value;//return the evaluated value
+        it->value=result;//update the symbol table
+        it->initialized=true;
+        return it->value;//return the evaluated value
     }
     
     if(BinaryOpNode* opNode=dynamic_cast<BinaryOpNode*>(node)){
@@ -128,4 +221,13 @@ int Interpreter::visit(AST* node){
     }
 
     throw runtime_error("Invalid AST node");
+}
+
+int Interpreter::interpret(AST* root){
+    collectFunctions(root);
+    FunctionNode* mainFunction=functionTable.lookup("main");
+    if(mainFunction==nullptr){
+        throw runtime_error("main Function not found!");
+    }
+    return callFunction(mainFunction,{});
 }

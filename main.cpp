@@ -7,36 +7,23 @@ using namespace std;
 int main(){
     cout<<"Compiler Calculator Project\n";
     Lexer lexer(
-        // "int main(){"
-        //     "int x = 10;"
-        //     "int y = 20;"
-        //     "bool flag = x < y;"
-        //     "if (flag) {"
-        //         "y = x + y;"
-        //     "}"
-        //     "while (x > 0) {"
-        //         "x = x - 5;"
-        //     "}"
-        //     "y+x;"
-        // "}"
-        // "int add(int a,int b,int c){"
-        //         "return a+b+c;"
-        //     "}"
-        // "int main(){"
-        //     "int a=10;"
-        //     "int b=a+6;"
-        //     "return add(add(0,1,a),b,3*12+9);"
-        // "}"
-        "int add(int a, int b) {"
-            "return a + b;"
+        "int max(int a,int b){"
+            "int ta=a;"
+            "int tb=b;"
+            "while(ta>0 && tb>0){"
+                "ta=ta-1;"
+                "tb=tb-1;"
+                "if(ta==0){"
+                    "return b;"
+                "}"
+                "if(tb==0){"
+                    "return a;"
+                "}"
+            "}"
+            "return a;"
         "}"
-
-        "int doubleIt(int x) {"
-            "return add(x,x);"
-        "}"
-
-        "int main() {"
-            "return doubleIt(10);"
+        "int main(){"
+            "return max(6,5);"
         "}"
         );
     Parser parser(lexer);
@@ -45,9 +32,9 @@ int main(){
     SemanticAnalyzer semanticanalyzer;
     semanticanalyzer.analyze(root);
     cout<<"Program semantically verified!!\n";
-    // Interpreter interpreter;
-    // int result=interpreter.visit(root);
-    // cout<<"Evaluated successfully!!\n";
-    // cout<<"Result: "<<result<<'\n';
+    Interpreter interpreter;
+    int result=interpreter.interpret(root);
+    cout<<"Evaluated successfully!!\n";
+    cout<<"Result: "<<result<<'\n';
     return 0;
 }
