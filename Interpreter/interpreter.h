@@ -1,25 +1,38 @@
 #ifndef INTERPRETER_H
 #define INTERPRETER_H
 
+#include<vector>
 #include<string>
 #include<map>
 #include "../Ast/ast.h"
 #include "callFrame.h"
 #include "runtimeFunctionTable.h"
 
-using namespace std;
-//  Interpreter is used to traverse the syntax tree and recursively evaluate the value of the expression
+// Executes the program by traversing and evaluating the AST.
 class Interpreter{
 private:
-    map<string,RuntimeValue> variables; //This map is used to store names of variable names with their respective runtime values.(It works as a symbol table).
-    CallFrame* currFrame;
-    RuntimeFunctionTable functionTable;
+    // Current runtime call frame.
+    // Non-owning pointer; points to the frame currently being executed.
+    CallFrame* currFrame; 
+
+    // Stores function definitions for runtime function lookup.
+    RuntimeFunctionTable functionTable; 
+
+    // Collects all function definitions from the AST.
     void collectFunctions(AST* root);
-    int executeFunction(AST* node,bool &returned);
-    int callFunction(FunctionNode* function,vector<AST*> arguments);
-    int visit(AST* node); //this function identifies what type of node is passed to it and evaluate the value accordingly in a recursive manner.
+
+     // Executes statements that may contain a return statement.
+    int executeFunction(AST* node,bool &returned); 
+
+    // Creates a new call frame and executes a function.
+    int callFunction(FunctionNode* function,std::vector<AST*> arguments); 
+
+    // Evaluates an AST node and returns its runtime value.
+    int visit(AST* node); 
 public:
     Interpreter();
+
+    // Executes the program starting from main().
     int interpret(AST* root);
 };
 #endif

@@ -1,20 +1,16 @@
-#include<bits/stdc++.h>
 #include "../Ast/ast.h"
 #include "interpreter.h"
 using namespace std;
 
-//dynamic_cast is used to check the node belong to numberNode class or binaryOpNode class
-// dynamic_cast in C++ is used for safe type conversion in inheritance hierarchies, mainly with polymorphism
-
 Interpreter::Interpreter(){
-    currFrame=NULL;
+    currFrame=nullptr;
 }
 
 void Interpreter::collectFunctions(AST* root){
     ProgramNode* program=dynamic_cast<ProgramNode*>(root);
     for(auto function:program->functions){
         if(!functionTable.insert(function->name,function)){
-            throw runtime_error ("Redeclaration of "+function->name+"()");
+            throw runtime_error ("Function Redeclaration: "+function->name);
         }
     }
 }
@@ -66,7 +62,11 @@ int Interpreter::executeFunction(AST* node,bool &returned){
 }
 
 int Interpreter::callFunction(FunctionNode* function,vector<AST*> arguments){
-    string funcName=function->name;
+    if(arguments.size()!=function->parameters.size()){
+        string err1="Expected: "+function->parameters.size();
+        string err2="Got: "+arguments.size();
+        throw runtime_error("Argument coount mismatch in function '"+function->name+"':"+"\n"+err1+'\n'+err2);
+    }
     vector<int> values;
     for(auto exp:arguments){
         values.push_back(visit(exp));
@@ -91,17 +91,17 @@ int Interpreter::callFunction(FunctionNode* function,vector<AST*> arguments){
 
 int Interpreter::visit(AST* node){
 
-    if(NumberNode* number=dynamic_cast<NumberNode*>(node)){
-        return stoi(number->value);
+    if(NumberNode* numberNode=dynamic_cast<NumberNode*>(node)){
+        return stoi(numberNode->value);
     }
-    //If a variable node comes it checks in the symbol table if it is stored there it returns the value else it throws error
-    if(VariableNode* var=dynamic_cast<VariableNode*>(node)){
-        auto it=currFrame->lookup(var->name);
+
+    if(VariableNode* varNode=dynamic_cast<VariableNode*>(node)){
+        auto it=currFrame->lookup(varNode->name);
         if(it==nullptr){
-            throw runtime_error("Undefined variable: "+var->name);
+            throw runtime_error("Undefined variable: "+varNode->name);
         }
         if(!it->initialized){
-            throw runtime_error("Accessing Unitialialized variable: "+var->name);
+            throw runtime_error("Variable uninitialized: "+varNode->name);
         }
 
         return it->value;
@@ -117,97 +117,89 @@ int Interpreter::visit(AST* node){
             case NOT:
                 return !value;
             default:
-                throw runtime_error("Invalid operator");
+                throw runtime_error("Invalid unary operator: "+opNode->op.value);
         }
     }
     
-    if(ProgramNode* program=dynamic_cast<ProgramNode*>(node)){
-        int result=0;
-        for(AST* function:program->functions){
-            result=visit(function);
-        }
-        return result;
-    }
-    
-    if(FunctionCallNode* function=dynamic_cast<FunctionCallNode*>(node)){
-        FunctionNode* functionNode=functionTable.lookup(function->name);
+    if(FunctionCallNode* functionCallNode=dynamic_cast<FunctionCallNode*>(node)){
+        FunctionNode* functionNode=functionTable.lookup(functionCallNode->name);
         if(functionNode==nullptr){
-            throw runtime_error("Undefined Function"+function->name+"()");
+            throw runtime_error("Undefined Function: "+functionCallNode->name);
         }
-        return callFunction(functionNode,function->arguments);
+        return callFunction(functionNode,functionCallNode->arguments);
     }
 
-    if(DeclareNode* declarenode=dynamic_cast<DeclareNode*>(node)){
-        RuntimeValue var(declarenode->type,0,false);
+    if(DeclareNode* declareNode=dynamic_cast<DeclareNode*>(node)){
+        RuntimeValue var(declareNode->type,0,false);
         int result=0;
-        if(declarenode->initializer){
-            result=visit(declarenode->initializer);
+        if(declareNode->initializer){
+            result=visit(declareNode->initializer);
             var.value=result;
             var.initialized=true;
         }
-        currFrame->insert(declarenode->variable->name,var);
+        currFrame->insert(declareNode->variable->name,var);
         return result;
     }
 
-    //It assigns the value to the variable (i.e by updating the symbol table) and also returns the evaluated value.
-    if(AssignNode* assign=dynamic_cast<AssignNode*>(node)){
-        int result=visit(assign->right); //evaluate the expression
-        auto it=currFrame->lookup(assign->left->name);
+    if(AssignNode* assignNode=dynamic_cast<AssignNode*>(node)){
+        int result=visit(assignNode->right);
+        auto it=currFrame->lookup(assignNode->left->name);
         if(it==nullptr){
-            throw runtime_error("Undefined Variable: "+assign->left->name);
+            throw runtime_error("Undefined Variable: "+assignNode->left->name);
         }
-        it->value=result;//update the symbol table
+        it->value=result;
         it->initialized=true;
-        return it->value;//return the evaluated value
+        return it->value;
     }
     
     if(BinaryOpNode* opNode=dynamic_cast<BinaryOpNode*>(node)){
-        //These two lines traverse in the tree and return the result after evaluating the left and right subtree
-        int LEFT=visit(opNode->left);
-        int RIGHT=visit(opNode->right);
-        //It handles the operation according to the operator and returns the result
+        int leftValue=visit(opNode->left);
+        int rightValue=visit(opNode->right);
         switch(opNode->op.type){
             case PLUS:
-                return LEFT+RIGHT;
+                return leftValue+rightValue;
             case MINUS:
-                return LEFT-RIGHT;
+                return leftValue-rightValue;
             case MULTIPLY:
-                return LEFT*RIGHT;
+                return leftValue*rightValue;
             case DIVIDE:
-                return LEFT/RIGHT;
+                if(rightValue==0){
+                    throw runtime_error("Divide by zero");
+                }
+                return leftValue/rightValue;
             case EQUAL:
-                return LEFT==RIGHT;
+                return leftValue==rightValue;
             case NOT_EQUAL:
-                return LEFT!=RIGHT;
+                return leftValue!=rightValue;
             case GREATER:
-                return LEFT>RIGHT;
+                return leftValue>rightValue;
             case GREATER_EQUAL:
-                return LEFT>=RIGHT;
+                return leftValue>=rightValue;
             case LESS:
-                return LEFT<RIGHT;
+                return leftValue<rightValue;
             case LESS_EQUAL:
-                return LEFT<=RIGHT;
+                return leftValue<=rightValue;
             case AND:
-                return LEFT&&RIGHT;
+                return leftValue&&rightValue;
             case OR:
-                return LEFT||RIGHT;
+                return leftValue||rightValue;
             default:
-                throw runtime_error("Invalid Operator");
+                throw runtime_error("Invalid Binary Operator: "+opNode->op.value);
         }
     }
 
-    if(IfNode* ifnode=dynamic_cast<IfNode*>(node)){
-        if(visit(ifnode->condition)){
-            visit(ifnode->thenbody);
-        }else if(ifnode->elsebody!=NULL){
-            visit(ifnode->elsebody);
+    if(IfNode* ifNode=dynamic_cast<IfNode*>(node)){
+        if(visit(ifNode->condition)){
+            visit(ifNode->thenbody);
+        }else if(ifNode->elsebody!=NULL){
+            visit(ifNode->elsebody);
         }
         return 0;
     }
 
-    if(WhileNode* whilenode=dynamic_cast<WhileNode*>(node)){
-        while(visit(whilenode->condition)){
-            visit(whilenode->body);
+    if(WhileNode* whileNode=dynamic_cast<WhileNode*>(node)){
+        while(visit(whileNode->condition)){
+            visit(whileNode->body);
         }
         return 0;
     }
